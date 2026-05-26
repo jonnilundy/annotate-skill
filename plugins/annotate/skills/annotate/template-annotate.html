@@ -1,0 +1,1594 @@
+<!doctype html>
+<html lang="en">
+<!-- ============================================================
+     ANNOTATE — single-file template
+
+     This file is self-contained. Open it in any browser; no
+     server, no build step, no network calls after first font load.
+
+     Generated from: {{SOURCE_FILENAME}}
+     Source SHA-256: {{SOURCE_SHA}}
+
+     How it works:
+       1. The markdown source is embedded below as a
+          <script type="text/plain" id="source"> block.
+       2. A tiny custom markdown renderer turns that into HTML
+          and tags each block with data-line-start / data-line-end
+          so annotations can anchor by line number.
+       3. Selecting text in the doc surfaces a small toolbar with
+          three actions: Suggest edit, Comment, Delete. Each annotation
+          is stored in localStorage keyed by the source SHA.
+       4. The right rail lists every annotation in document order.
+          Click an annotation to jump to its anchor.
+       5. Export writes an annotations.md file. Copy puts the same
+          content on the clipboard, ready to paste back to Claude.
+     ============================================================ -->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{SOURCE_FILENAME}} · Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─────────── TOKENS ─────────── */
+    :root {
+      --paper: #fffff8;
+      --paper-soft: #f6f3e6;
+      --paper-edge: #ece8d6;
+      --card: #fffffb;
+      --ink: #111111;
+      --ink-2: #333029;
+      --ink-3: #6b6256;
+      --rule: #e7e2d0;
+      --rule-strong: #cfc7b0;
+      --accent: #A8331C;
+      --accent-soft: #D99A91;
+      --suggest: #2F5E8F;
+      --comment: #B0840A;
+      --delete: #A6403B;
+      --highlight: #faf0c0;
+      --font-serif: 'Newsreader', Palatino, 'Palatino Linotype', Georgia, serif;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      --drawer-width: 360px;
+      --topbar-height: 52px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-serif); font-size: 19px; line-height: 1.72; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    ::selection { background: var(--highlight); color: var(--ink); }
+
+    /* ─────────── TOP BAR ─────────── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--topbar-height);
+      background: rgba(255,255,248,0.92);
+      backdrop-filter: saturate(1.1) blur(6px);
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 22px;
+      font-family: var(--font-sans);
+    }
+    .topbar .source {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 0 1 auto;
+      max-width: 360px;
+    }
+    .topbar .status {
+      font-size: 11px;
+      color: var(--ink-3);
+      letter-spacing: 0.03em;
+      flex: 1;
+    }
+    .topbar .status .count { font-weight: 600; color: var(--ink-2); }
+    .topbar .status .saved-dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #4A6741;
+      margin: 0 6px 1px 8px;
+      vertical-align: middle;
+    }
+    .topbar .actions { display: flex; gap: 4px; align-items: center; }
+    .topbar button {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink-2);
+      padding: 6px 11px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .topbar button:hover { background: var(--paper-soft); color: var(--ink); }
+    .topbar button.primary { color: var(--accent); font-weight: 600; }
+    .topbar button.primary:hover { background: var(--accent); color: #fffff8; }
+    .topbar button.danger:hover { background: var(--accent-soft); color: var(--accent); }
+    .topbar button.toggle.active { background: var(--paper-soft); border-color: var(--rule-strong); color: var(--ink); }
+
+    /* ─────────── LAYOUT ─────────── */
+    .layout {
+      min-height: calc(100vh - var(--topbar-height));
+    }
+    .doc-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 44px 56px 220px;
+    }
+    /* The readable text column. Sidenotes float into the open right margin. */
+    .doc .rendered > *,
+    .doc .preamble { max-width: 36rem; }
+
+    /* ─────────── NOTES FOR CLAUDE ─────────── */
+    .preamble {
+      border-left: 2px solid var(--rule-strong);
+      padding: 2px 0 2px 18px;
+      margin: 0 0 48px;
+    }
+    .preamble .label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 8px;
+    }
+    .preamble textarea {
+      width: 100%;
+      min-height: 58px;
+      padding: 8px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--card);
+      resize: vertical;
+    }
+    .preamble textarea:focus { outline: none; border-color: var(--rule-strong); }
+    .preamble .hint {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-top: 7px;
+    }
+
+    /* ─────────── RENDERED DOCUMENT ─────────── */
+    /* Tufte-flavored typography: serif, italic headlines, quiet hierarchy. */
+    .rendered h1, .rendered h2, .rendered h3, .rendered h4, .rendered h5, .rendered h6 {
+      font-family: var(--font-serif);
+      font-weight: 400;
+      line-height: 1.15;
+      text-wrap: balance;
+    }
+    .rendered h1 { font-size: 2.5rem; font-style: normal; margin: 0 0 0.4em; letter-spacing: -0.01em; }
+    .rendered h2 { font-size: 1.75rem; font-style: italic; margin: 2.4rem 0 0.5rem; }
+    .rendered h3 { font-size: 1.35rem; font-style: italic; margin: 2rem 0 0.4rem; }
+    .rendered h4 { font-size: 1.05rem; font-weight: 600; font-style: normal; margin: 1.6rem 0 0.3rem; }
+    .rendered h5, .rendered h6 {
+      font-size: 0.78rem; font-weight: 600; font-style: normal;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);
+      margin: 1.4rem 0 0.3rem;
+    }
+    .rendered p { margin: 0 0 1.15em; }
+    .rendered ul, .rendered ol { margin: 0 0 1.15em; padding-left: 1.4em; }
+    .rendered li { margin-bottom: 0.4em; }
+    .rendered li > ul, .rendered li > ol { margin-top: 0.4em; margin-bottom: 0.4em; }
+    .rendered blockquote {
+      margin: 1.4em 0;
+      padding: 0 0 0 1.2em;
+      border-left: 2px solid var(--rule-strong);
+      color: var(--ink-2);
+      font-style: italic;
+    }
+    .rendered blockquote p { margin-bottom: 0.5em; }
+    .rendered blockquote p:last-child { margin-bottom: 0; }
+    .rendered hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4em 0; }
+    .rendered code {
+      font-family: var(--font-mono);
+      font-size: 0.82em;
+      background: var(--paper-soft);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .rendered pre {
+      background: var(--paper-soft);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      margin: 0 0 1.15em;
+    }
+    .rendered pre code { background: transparent; padding: 0; font-size: 0.8rem; }
+    .rendered strong { font-weight: 600; color: var(--ink); }
+    .rendered em { font-style: italic; }
+    /* Tufte links: inherit ink, underline rather than recolor. */
+    .rendered a {
+      color: inherit;
+      text-decoration: underline;
+      text-decoration-color: var(--rule-strong);
+      text-underline-offset: 0.12em;
+      text-decoration-thickness: 0.06em;
+    }
+    .rendered a:hover { text-decoration-color: var(--ink); }
+    .doc .rendered > table { max-width: 44rem; }
+    .rendered table {
+      border-collapse: collapse;
+      margin: 0 0 1.15em;
+      font-size: 0.82rem;
+    }
+    .rendered th, .rendered td {
+      border-bottom: 1px solid var(--rule);
+      padding: 6px 14px 6px 0;
+      text-align: left;
+      vertical-align: top;
+    }
+    .rendered th { font-weight: 600; border-bottom-color: var(--rule-strong); }
+
+    /* Small-caps section opener (Tufte .newthought). */
+    .rendered .newthought { font-variant: small-caps; font-style: normal; letter-spacing: 0.03em; }
+
+    /* Line numbers are not rendered in the UI. The data-line-start attribute
+       is still used for anchoring and is carried into the export (L<n>). */
+
+    /* ─────────── ANNOTATION MARKS ─────────── */
+    /* Marks read as soft highlighter swatches (colored background), distinct
+       from Tufte links which are thin underlines with no background. */
+    .rendered mark.anno {
+      background: transparent;
+      padding: 0.05em 0.12em;
+      margin: 0 -0.04em;
+      border-radius: 2px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      cursor: pointer;
+      transition: background 0.12s ease, box-shadow 0.12s ease;
+    }
+    .rendered mark.anno-comment { background: rgba(206, 168, 30, 0.20); box-shadow: inset 0 -1.5px 0 var(--comment); }
+    .rendered mark.anno-suggest { background: rgba(47, 94, 143, 0.15); box-shadow: inset 0 -1.5px 0 var(--suggest); }
+    .rendered mark.anno-delete { background: rgba(166, 64, 59, 0.14); box-shadow: inset 0 -1.5px 0 var(--delete); text-decoration: line-through; text-decoration-color: rgba(166,64,59,0.55); }
+    .rendered mark.anno:hover { background: var(--highlight); }
+    .rendered mark.anno.focused {
+      background: var(--highlight);
+      box-shadow: 0 0 0 2px var(--highlight);
+    }
+
+    /* Superscript reference numeral that ties text to its sidenote. */
+    .rendered .anno-ref {
+      font-family: var(--font-sans);
+      font-size: 0.6rem;
+      font-weight: 600;
+      vertical-align: super;
+      line-height: 0;
+      margin: 0 1px 0 2px;
+      cursor: pointer;
+      color: var(--ink-3);
+    }
+    .rendered .anno-ref-suggest { color: var(--suggest); }
+    .rendered .anno-ref-comment { color: var(--comment); }
+    .rendered .anno-ref-delete { color: var(--delete); }
+
+    /* ─────────── SIDENOTES (right margin) ─────────── */
+    .rendered .sidenote {
+      float: right;
+      clear: right;
+      width: 15rem;
+      margin-right: -17rem;
+      margin-top: 0.15rem;
+      margin-bottom: 1.2rem;
+      padding-left: 0.85rem;
+      border-left: 2px solid var(--rule-strong);
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--ink-2);
+      cursor: pointer;
+      position: relative;
+    }
+    .rendered .sidenote .sn-head {
+      display: block;
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+      color: var(--ink-3);
+    }
+    .rendered .sidenote .sn-num { font-variant-numeric: tabular-nums; }
+    .rendered .sidenote .sn-body { display: block; }
+    .rendered .sidenote .sn-empty { font-style: italic; color: var(--ink-3); }
+    .rendered .sidenote .sn-repl {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      line-height: 1.4;
+      color: var(--suggest);
+      margin-top: 0.35rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .rendered .sidenote.anno-suggest { border-left-color: var(--suggest); }
+    .rendered .sidenote.anno-comment { border-left-color: var(--comment); }
+    .rendered .sidenote.anno-delete { border-left-color: var(--delete); }
+    .rendered .sidenote.anno-suggest .sn-head { color: var(--suggest); }
+    .rendered .sidenote.anno-comment .sn-head { color: var(--comment); }
+    .rendered .sidenote.anno-delete .sn-head { color: var(--delete); }
+    .rendered .sidenote.focused { background: var(--highlight); border-radius: 0 3px 3px 0; }
+
+    /* ─────────── DRAWER (slide-out annotation list) ─────────── */
+    .drawer {
+      position: fixed;
+      top: var(--topbar-height);
+      right: 0;
+      width: var(--drawer-width);
+      max-width: 92vw;
+      height: calc(100vh - var(--topbar-height));
+      border-left: 1px solid var(--rule);
+      background: var(--paper-soft);
+      padding: 20px 18px 32px;
+      overflow-y: auto;
+      font-family: var(--font-sans);
+      transform: translateX(100%);
+      transition: transform 0.22s ease;
+      z-index: 40;
+      box-shadow: -10px 0 28px rgba(0,0,0,0.06);
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer h2 {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin: 0 0 16px;
+    }
+    .rail-empty {
+      font-size: 13px;
+      color: var(--ink-3);
+      line-height: 1.5;
+      padding: 16px 0;
+    }
+    .rail-empty strong { color: var(--ink-2); }
+    .rail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .rail-item {
+      background: var(--card);
+      border: 1px solid var(--rule);
+      border-left: 3px solid;
+      border-radius: 4px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, transform 0.1s ease;
+    }
+    .rail-item:hover { border-color: var(--rule-strong); }
+    .rail-item.focused { transform: translateX(-3px); border-color: var(--ink-3); }
+    .rail-item.suggest { border-left-color: var(--suggest); }
+    .rail-item.comment { border-left-color: var(--comment); }
+    .rail-item.delete { border-left-color: var(--delete); }
+    .rail-item .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .rail-item .type {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .rail-item.suggest .type { color: var(--suggest); }
+    .rail-item.comment .type { color: var(--comment); }
+    .rail-item.delete .type { color: var(--delete); }
+    .rail-item .line {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ink-3);
+    }
+    .rail-item .line.warn { color: var(--accent); font-weight: 600; cursor: help; }
+    .rail-item.unanchored { border-left-color: var(--accent); border-left-style: dashed; opacity: 0.92; }
+    .rail-item .quote {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      font-style: italic;
+      color: var(--ink-2);
+      line-height: 1.4;
+      margin: 0 0 6px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .rail-item .body {
+      font-size: 13px;
+      color: var(--ink);
+      line-height: 1.45;
+      margin: 0;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+    .rail-item .replacement {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--suggest);
+      background: rgba(47, 94, 143, 0.10);
+      padding: 6px 8px;
+      border-radius: 3px;
+      margin-top: 6px;
+      line-height: 1.4;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+
+    /* ─────────── SELECTION TOOLBAR ─────────── */
+    .sel-toolbar {
+      position: absolute;
+      z-index: 100;
+      display: flex;
+      gap: 2px;
+      background: var(--card);
+      border: 1px solid var(--rule-strong);
+      border-radius: 7px;
+      padding: 3px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      font-family: var(--font-sans);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(4px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .sel-toolbar.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .sel-toolbar button {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      color: var(--ink-2);
+      padding: 6px 11px;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.1s ease, color 0.1s ease;
+    }
+    .sel-toolbar button:hover { background: var(--paper-soft); }
+    .sel-toolbar button.suggest:hover { background: var(--suggest); color: #fffff8; }
+    .sel-toolbar button.comment:hover { background: var(--comment); color: #fffff8; }
+    .sel-toolbar button.delete:hover { background: var(--delete); color: #fffff8; }
+
+    /* ─────────── EDITOR DIALOG ─────────── */
+    .editor-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(31, 26, 21, 0.32);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .editor-backdrop.visible { display: flex; }
+    .editor {
+      background: var(--card);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+      font-family: var(--font-sans);
+      max-height: 86vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .editor header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .editor header .type {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .editor.suggest header .type { color: var(--suggest); }
+    .editor.comment header .type { color: var(--comment); }
+    .editor.delete header .type { color: var(--delete); }
+    .editor header .line { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+    .editor .body { padding: 18px 24px; overflow-y: auto; flex: 1; }
+    .editor .quote {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 15px;
+      color: var(--ink-2);
+      padding: 10px 14px;
+      background: var(--paper);
+      border-left: 3px solid var(--rule-strong);
+      border-radius: 0 4px 4px 0;
+      margin: 0 0 16px;
+      line-height: 1.45;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+    .editor label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin: 14px 0 6px;
+    }
+    .editor textarea {
+      width: 100%;
+      min-height: 90px;
+      padding: 12px 14px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--paper);
+      resize: vertical;
+    }
+    .editor textarea.replacement {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      min-height: 110px;
+    }
+    .editor textarea:focus { outline: none; border-color: var(--accent); }
+    .editor footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--rule);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .editor footer .delete { margin-right: auto; }
+    .editor button {
+      appearance: none;
+      border: 1px solid var(--rule);
+      background: var(--card);
+      color: var(--ink);
+      padding: 8px 16px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .editor button:hover { background: var(--paper-soft); }
+    .editor button.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
+    .editor button.primary:hover { background: #000; }
+    .editor button.delete { color: var(--accent); border-color: transparent; }
+    .editor button.delete:hover { background: var(--accent-soft); }
+
+    /* ─────────── SOURCE MISMATCH BANNER ─────────── */
+    .mismatch {
+      background: var(--accent);
+      color: var(--card);
+      padding: 16px 24px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+    .mismatch.visible { display: block; }
+
+    /* ─────────── RESPONSIVE ─────────── */
+    /* Below this width the right margin can't hold sidenotes: collapse them
+       and let the slide-out drawer be the way to view annotations. */
+    @media (max-width: 1024px) {
+      .rendered .sidenote { display: none; }
+      .doc .rendered > *, .doc .preamble, .doc .rendered > table { max-width: 100%; }
+      .doc-wrap { padding: 32px 28px 160px; }
+    }
+    @media (max-width: 640px) {
+      .drawer { width: 100%; max-width: 100%; }
+      .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 10px; }
+      .topbar .source { max-width: 100%; }
+      .topbar .status { flex-basis: 100%; order: 3; }
+      .topbar .actions { order: 2; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="source" title="{{SOURCE_FILENAME}}">{{SOURCE_FILENAME}}</div>
+  <div class="status">
+    <span class="count" id="count">0 annotations</span>
+    <span class="saved-dot"></span>
+    <span id="saved-when">saved</span>
+  </div>
+  <div class="actions">
+    <button id="btn-list" class="toggle" title="Show all annotations in a list">Annotations</button>
+    <button id="btn-copy" title="Copy annotations markdown to clipboard">Copy for Claude</button>
+    <button id="btn-export" class="primary" title="Download annotations.md">Export</button>
+    <button id="btn-reset" class="danger" title="Delete all annotations">Reset</button>
+  </div>
+</header>
+
+<div class="mismatch" id="mismatch">
+  The embedded source SHA does not match what was loaded at generation time. This shouldn't happen for a self-contained file. Annotations may anchor incorrectly.
+</div>
+
+<div class="layout">
+  <main class="doc-wrap">
+    <div class="doc">
+      <section class="preamble">
+        <div class="label">Notes for Claude</div>
+        <textarea id="preamble" placeholder="High-level direction for this review. What to keep in mind, what to do with the output."></textarea>
+        <div class="hint">Always exported as the first section. Select any text in the document below to add an inline annotation.</div>
+      </section>
+      <article class="rendered" id="rendered"></article>
+    </div>
+  </main>
+
+  <aside class="drawer" id="drawer">
+    <h2>Annotations</h2>
+    <div id="rail-content"></div>
+  </aside>
+</div>
+
+<div class="sel-toolbar" id="sel-toolbar">
+  <button class="suggest" data-type="suggest">Suggest edit</button>
+  <button class="comment" data-type="comment">Comment</button>
+  <button class="delete" data-type="delete">Delete</button>
+</div>
+
+<div class="editor-backdrop" id="editor-backdrop">
+  <div class="editor" id="editor">
+    <header>
+      <span class="type" id="editor-type"></span>
+      <span class="line" id="editor-line"></span>
+    </header>
+    <div class="body">
+      <div class="quote" id="editor-quote"></div>
+      <div id="replacement-wrap" hidden>
+        <label>Replace with</label>
+        <textarea class="replacement" id="editor-replacement" placeholder="The new text that should replace the selection."></textarea>
+      </div>
+      <label id="body-label">Note</label>
+      <textarea id="editor-body" placeholder="Your note. Why, what to watch for, who to check with."></textarea>
+    </div>
+    <footer>
+      <button class="delete" id="editor-delete" hidden>Delete</button>
+      <button id="editor-cancel">Cancel</button>
+      <button class="primary" id="editor-save">Save</button>
+    </footer>
+  </div>
+</div>
+
+<script type="text/plain" id="source-md">{{SOURCE_MARKDOWN}}</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ─────────── CONFIG ───────────
+  const SOURCE_FILENAME = {{SOURCE_FILENAME_JSON}};
+  const SOURCE_SHA = {{SOURCE_SHA_JSON}};
+  const STORAGE_KEY = 'annotate:' + SOURCE_SHA;
+
+  // ─────────── STATE ───────────
+  let state = loadState();
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Migrate legacy 'question' annotations to 'comment'.
+        const annotations = (parsed.annotations || []).map(a =>
+          a.type === 'question' ? { ...a, type: 'comment' } : a
+        );
+        return {
+          preamble: parsed.preamble || '',
+          annotations,
+          lastSaved: parsed.lastSaved || null
+        };
+      }
+    } catch (e) {}
+    return { preamble: '', annotations: [], lastSaved: null };
+  }
+
+  function saveState() {
+    state.lastSaved = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const count = state.annotations.length;
+    document.getElementById('count').textContent =
+      count === 0 ? 'No annotations yet' :
+      count === 1 ? '1 annotation' :
+      count + ' annotations';
+    const savedEl = document.getElementById('saved-when');
+    if (!state.lastSaved) {
+      savedEl.textContent = count === 0 ? 'nothing to save' : 'saved';
+      return;
+    }
+    const ago = Math.floor((Date.now() - state.lastSaved) / 1000);
+    if (ago < 5) savedEl.textContent = 'saved just now';
+    else if (ago < 60) savedEl.textContent = 'saved ' + ago + 's ago';
+    else if (ago < 3600) savedEl.textContent = 'saved ' + Math.floor(ago / 60) + 'm ago';
+    else savedEl.textContent = 'saved ' + Math.floor(ago / 3600) + 'h ago';
+  }
+
+  setInterval(updateStatus, 15000);
+
+  // ─────────── SOURCE ───────────
+  const sourceMd = document.getElementById('source-md').textContent;
+  const sourceLines = sourceMd.split('\n');
+
+  // Verify SHA on load.
+  (async function verifySha() {
+    if (!crypto.subtle) return;
+    try {
+      const enc = new TextEncoder().encode(sourceMd);
+      const hashBuf = await crypto.subtle.digest('SHA-256', enc);
+      const hash = Array.from(new Uint8Array(hashBuf))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      if (SOURCE_SHA && hash !== SOURCE_SHA) {
+        document.getElementById('mismatch').classList.add('visible');
+        console.warn('SHA mismatch. Expected:', SOURCE_SHA, 'Got:', hash);
+      }
+    } catch (e) {}
+  })();
+
+  // ─────────── MARKDOWN RENDERER ───────────
+  // Minimal renderer that tags blocks with data-line-start / data-line-end.
+  // Handles: headings, paragraphs, lists, blockquotes, code blocks, tables,
+  // hr, inline bold/italic/code/links.
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  function renderInline(s) {
+    s = escapeHtml(s);
+    // code spans first to protect their contents
+    const codes = [];
+    s = s.replace(/`([^`]+)`/g, (_, c) => {
+      codes.push(c);
+      return 'CODE' + (codes.length - 1) + '';
+    });
+    // bold (**)
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // bold (__)
+    s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    // italic (*)
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    // italic (_)
+    s = s.replace(/(^|[^_a-zA-Z0-9])_([^_\n]+)_(?![_a-zA-Z0-9])/g, '$1<em>$2</em>');
+    // links [text](url)
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) =>
+      `<a href="${u}" target="_blank" rel="noopener">${t}</a>`);
+    // restore code spans
+    s = s.replace(/CODE(\d+)/g, (_, i) => '<code>' + escapeHtml(codes[+i]) + '</code>');
+    return s;
+  }
+
+  function renderMarkdown(src) {
+    const lines = src.split('\n');
+    const out = [];
+    let i = 0;
+
+    function block(html, startLine, endLine) {
+      // startLine and endLine are 1-indexed for human consumption.
+      out.push(html.replace(/^<(\w+)/, `<$1 data-line-start="${startLine}" data-line-end="${endLine}"`));
+    }
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const startLine = i + 1;
+
+      // Blank
+      if (/^\s*$/.test(line)) { i++; continue; }
+
+      // Horizontal rule
+      if (/^\s*(\*\s*\*\s*\*|-\s*-\s*-|_\s*_\s*_)[\s\*\-_]*$/.test(line)) {
+        block(`<hr>`, startLine, startLine);
+        i++; continue;
+      }
+
+      // ATX heading
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) {
+        const lvl = h[1].length;
+        block(`<h${lvl}>${renderInline(h[2].trim())}</h${lvl}>`, startLine, startLine);
+        i++; continue;
+      }
+
+      // Fenced code block
+      const fence = line.match(/^(\s*)(```|~~~)(.*)$/);
+      if (fence) {
+        const marker = fence[2];
+        const codeLines = [];
+        i++;
+        while (i < lines.length && !lines[i].trimStart().startsWith(marker)) {
+          codeLines.push(lines[i]); i++;
+        }
+        const endLine = i + 1;
+        if (i < lines.length) i++;
+        block(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`, startLine, endLine);
+        continue;
+      }
+
+      // Blockquote
+      if (/^\s*>\s?/.test(line)) {
+        const quoteLines = [];
+        const sLine = i + 1;
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          quoteLines.push(lines[i].replace(/^\s*>\s?/, '')); i++;
+        }
+        const eLine = i;
+        const inner = renderMarkdown(quoteLines.join('\n'))
+          .replace(/data-line-start="(\d+)"/g, (_, n) => `data-line-start="${+n + sLine - 1}"`)
+          .replace(/data-line-end="(\d+)"/g, (_, n) => `data-line-end="${+n + sLine - 1}"`);
+        block(`<blockquote>${inner}</blockquote>`, sLine, eLine);
+        continue;
+      }
+
+      // Table (pipe table, simple)
+      if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|\-]+\|?\s*$/.test(lines[i+1])) {
+        const sLine = i + 1;
+        const header = lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        i += 2; // skip separator
+        const rows = [];
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+          rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
+          i++;
+        }
+        const eLine = i;
+        let html = '<table><thead><tr>' +
+          header.map(c => `<th>${renderInline(c)}</th>`).join('') +
+          '</tr></thead><tbody>' +
+          rows.map(r => '<tr>' + r.map(c => `<td>${renderInline(c)}</td>`).join('') + '</tr>').join('') +
+          '</tbody></table>';
+        block(html, sLine, eLine);
+        continue;
+      }
+
+      // Unordered or ordered list
+      const ulm = line.match(/^(\s*)([-*+])\s+(.*)$/);
+      const olm = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+      if (ulm || olm) {
+        const isOl = !!olm;
+        const sLine = i + 1;
+        const items = [];
+        let currentItem = null;
+        const baseIndent = (ulm || olm)[1].length;
+        while (i < lines.length) {
+          const ln = lines[i];
+          const um = ln.match(/^(\s*)([-*+])\s+(.*)$/);
+          const om = ln.match(/^(\s*)(\d+)\.\s+(.*)$/);
+          const match = (isOl ? om : um);
+          if (match && match[1].length === baseIndent) {
+            if (currentItem) items.push(currentItem);
+            currentItem = { startLine: i + 1, endLine: i + 1, content: match[3], children: [] };
+            i++;
+          } else if (/^\s*$/.test(ln)) {
+            // blank inside list, peek ahead
+            if (i + 1 < lines.length) {
+              const next = lines[i + 1];
+              const nextMatch = isOl ? next.match(/^(\s*)(\d+)\.\s+/) : next.match(/^(\s*)([-*+])\s+/);
+              if (nextMatch && nextMatch[1].length === baseIndent) { i++; continue; }
+              if (/^\s+\S/.test(next)) { i++; continue; }
+            }
+            break;
+          } else if (/^\s+\S/.test(ln) && currentItem) {
+            currentItem.content += '\n' + ln.trim();
+            currentItem.endLine = i + 1;
+            i++;
+          } else {
+            break;
+          }
+        }
+        if (currentItem) items.push(currentItem);
+        const eLine = items.length ? items[items.length - 1].endLine : sLine;
+        const tag = isOl ? 'ol' : 'ul';
+        const html = `<${tag}>` + items.map(it =>
+          `<li data-line-start="${it.startLine}" data-line-end="${it.endLine}">${renderInline(it.content)}</li>`
+        ).join('') + `</${tag}>`;
+        block(html, sLine, eLine);
+        continue;
+      }
+
+      // Paragraph
+      const pStart = i + 1;
+      const pLines = [line];
+      i++;
+      while (i < lines.length && !/^\s*$/.test(lines[i])
+             && !/^#{1,6}\s/.test(lines[i])
+             && !/^\s*>\s?/.test(lines[i])
+             && !/^\s*(```|~~~)/.test(lines[i])
+             && !/^\s*([-*+]|\d+\.)\s+/.test(lines[i])
+             && !/^\s*\|/.test(lines[i])) {
+        pLines.push(lines[i]); i++;
+      }
+      const pEnd = i;
+      block(`<p>${renderInline(pLines.join(' ').trim())}</p>`, pStart, pEnd);
+    }
+    return out.join('\n');
+  }
+
+  // ─────────── RENDER DOC ───────────
+  const rendered = document.getElementById('rendered');
+  // Strip YAML frontmatter (--- ... ---) at the top of the document.
+  // Blank the lines rather than delete them so subsequent line numbers
+  // still match the original source file (anchors depend on this).
+  let mdForRender = sourceMd;
+  {
+    const lns = mdForRender.split('\n');
+    if (lns.length > 0 && /^---\s*$/.test(lns[0])) {
+      for (let j = 1; j < lns.length; j++) {
+        if (/^---\s*$/.test(lns[j])) {
+          for (let k = 0; k <= j; k++) lns[k] = '';
+          mdForRender = lns.join('\n');
+          break;
+        }
+      }
+    }
+  }
+  rendered.innerHTML = renderMarkdown(mdForRender);
+  document.getElementById('preamble').value = state.preamble;
+  document.getElementById('preamble').addEventListener('input', e => {
+    state.preamble = e.target.value;
+    saveState();
+  });
+
+  // ─────────── ANNOTATION HIGHLIGHTS ───────────
+  // Injected UI (sidenotes + superscript refs) lives inside the paragraph it
+  // annotates. These helpers walk only the ORIGINAL source text, skipping that
+  // injected UI, so character offsets always map to the source document.
+  function annoUiText(node) {
+    return node.parentElement && node.parentElement.closest('.anno-ref, .sidenote');
+  }
+  function blockTextNodes(blockEl) {
+    const out = [];
+    const w = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) { return annoUiText(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }
+    });
+    while (w.nextNode()) out.push(w.currentNode);
+    return out;
+  }
+  function blockTextOf(blockEl) {
+    return blockTextNodes(blockEl).map(n => n.textContent).join('');
+  }
+  // Document-order sort + a stable 1-based numbering shared by sidenotes/list.
+  function sortedAnnotations() {
+    return [...state.annotations].sort((a, b) =>
+      a.blockLineStart - b.blockLineStart || a.offsetStart - b.offsetStart);
+  }
+  function annoNumberMap() {
+    const map = {};
+    sortedAnnotations().forEach((a, i) => { map[a.id] = i + 1; });
+    return map;
+  }
+
+  function findBlockByLine(line) {
+    const blocks = rendered.querySelectorAll('[data-line-start]');
+    let best = null;
+    for (const b of blocks) {
+      const s = +b.dataset.lineStart;
+      const e = +b.dataset.lineEnd;
+      if (s <= line && line <= e) {
+        if (!best || (e - s) < (+best.dataset.lineEnd - +best.dataset.lineStart)) {
+          best = b;
+        }
+      }
+    }
+    return best;
+  }
+
+  // A leaf block has no nested [data-line-start] descendant (e.g. a <p>, <li>,
+  // <h2> — but not a <ul> that contains <li>s). Annotations always anchor to
+  // leaf blocks so create-time and render-time agree on the same element.
+  function isLeafBlock(b) { return b && !b.querySelector('[data-line-start]'); }
+
+  function enclosingLeafBlock(node) {
+    const el = node && node.nodeType === 1 ? node : (node && node.parentElement);
+    if (!el) return null;
+    let b = el.closest('[data-line-start]');
+    // Walk down to the smallest (leaf) block if we landed on a container.
+    while (b && !isLeafBlock(b)) {
+      const inner = [...b.querySelectorAll('[data-line-start]')].find(x => x.contains(el));
+      if (!inner || inner === b) break;
+      b = inner;
+    }
+    return b;
+  }
+
+  // Resolve the block to anchor/highlight an annotation in. Prefer the leaf
+  // block at the stored line whose text actually contains the selection; fall
+  // back to the nearest leaf block anywhere that contains it. This makes
+  // rendering resilient to line drift and to container-vs-leaf mismatches.
+  function findAnchorBlock(anno) {
+    const byLine = findBlockByLine(anno.blockLineStart);
+    if (byLine && isLeafBlock(byLine) && blockTextOf(byLine).indexOf(anno.selectedText) !== -1) {
+      return byLine;
+    }
+    let best = null, bestDist = Infinity;
+    rendered.querySelectorAll('[data-line-start]').forEach(b => {
+      if (!isLeafBlock(b)) return;
+      if (blockTextOf(b).indexOf(anno.selectedText) !== -1) {
+        const d = Math.abs((+b.dataset.lineStart) - anno.blockLineStart);
+        if (d < bestDist) { bestDist = d; best = b; }
+      }
+    });
+    return best || (isLeafBlock(byLine) ? byLine : null);
+  }
+
+  function highlightInBlock(block, anno) {
+    if (!block) return;
+    // Walk source text nodes only (skip injected sidenotes/refs), find offsets.
+    const nodes = blockTextNodes(block);
+    const text = blockTextOf(block);
+    const offsetStart = anno.offsetStart;
+    const offsetEnd = anno.offsetEnd;
+    // Validate offsets still point at the same text.
+    const slice = text.slice(offsetStart, offsetEnd);
+    if (slice !== anno.selectedText) {
+      // Try to find the text fresh (it may have shifted due to other annotations).
+      const fresh = text.indexOf(anno.selectedText);
+      if (fresh === -1) {
+        return; // can't find, skip
+      }
+      anno.offsetStart = fresh;
+      anno.offsetEnd = fresh + anno.selectedText.length;
+    }
+
+    let pos = 0;
+    let startNode = null, startOff = 0;
+    let endNode = null, endOff = 0;
+
+    for (const node of nodes) {
+      const len = node.textContent.length;
+      if (!startNode && pos + len > anno.offsetStart) {
+        startNode = node;
+        startOff = anno.offsetStart - pos;
+      }
+      if (!endNode && pos + len >= anno.offsetEnd) {
+        endNode = node;
+        endOff = anno.offsetEnd - pos;
+        break;
+      }
+      pos += len;
+    }
+    if (!startNode || !endNode) return;
+
+    if (startNode === endNode) {
+      const range = document.createRange();
+      range.setStart(startNode, startOff);
+      range.setEnd(endNode, endOff);
+      const mark = document.createElement('mark');
+      mark.className = 'anno anno-' + anno.type;
+      mark.dataset.id = anno.id;
+      try { range.surroundContents(mark); } catch (e) { /* skip */ }
+      return;
+    }
+    // Multi-node: wrap each node's portion.
+    const startIdx = nodes.indexOf(startNode);
+    const endIdx = nodes.indexOf(endNode);
+    for (let k = startIdx; k <= endIdx; k++) {
+      const node = nodes[k];
+      const len = node.textContent.length;
+      const localStart = k === startIdx ? startOff : 0;
+      const localEnd = k === endIdx ? endOff : len;
+      if (localStart >= localEnd) continue;
+      const range = document.createRange();
+      range.setStart(node, localStart);
+      range.setEnd(node, localEnd);
+      const mark = document.createElement('mark');
+      mark.className = 'anno anno-' + anno.type;
+      mark.dataset.id = anno.id;
+      try { range.surroundContents(mark); } catch (e) { /* skip */ }
+    }
+  }
+
+  // Ids of annotations that successfully produced at least one mark on the last
+  // render. The drawer uses this to flag any annotation that couldn't anchor,
+  // so behaviour is never silently "drawer-only".
+  let anchoredIds = new Set();
+
+  function renderHighlights() {
+    // Clear existing marks
+    rendered.querySelectorAll('mark.anno').forEach(m => {
+      const parent = m.parentNode;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+      parent.normalize();
+    });
+    // Apply in order; longest first to reduce conflicts.
+    const sorted = [...state.annotations].sort((a, b) => (b.offsetEnd - b.offsetStart) - (a.offsetEnd - a.offsetStart));
+    for (const anno of sorted) {
+      const block = findAnchorBlock(anno);
+      highlightInBlock(block, anno);
+    }
+    anchoredIds = new Set();
+    rendered.querySelectorAll('mark.anno').forEach(m => anchoredIds.add(m.dataset.id));
+  }
+
+  const TYPE_LABEL = { suggest: 'Suggest', comment: 'Comment', delete: 'Delete' };
+
+  // ─────────── SIDENOTES (right margin) ───────────
+  function renderSidenotes() {
+    rendered.querySelectorAll('.anno-ref, .sidenote').forEach(el => el.remove());
+    const nums = annoNumberMap();
+    for (const a of sortedAnnotations()) {
+      const marks = rendered.querySelectorAll(`mark.anno[data-id="${a.id}"]`);
+      if (!marks.length) continue; // text not found in DOM → appears in the list only
+      const lastMark = marks[marks.length - 1];
+      const n = nums[a.id];
+
+      const sup = document.createElement('sup');
+      sup.className = 'anno-ref anno-ref-' + a.type;
+      sup.dataset.id = a.id;
+      sup.textContent = n;
+
+      const note = document.createElement('span');
+      note.className = 'sidenote anno-' + a.type;
+      note.dataset.id = a.id;
+      let inner = `<span class="sn-head"><span class="sn-num">${n}</span> · ${TYPE_LABEL[a.type] || a.type}</span>`;
+      if (a.body) {
+        inner += `<span class="sn-body">${escapeHtml(a.body)}</span>`;
+      } else if (a.type !== 'suggest') {
+        inner += `<span class="sn-empty">(no note)</span>`;
+      }
+      if (a.type === 'suggest' && a.replacement) {
+        inner += `<span class="sn-repl">${escapeHtml(a.replacement)}</span>`;
+      }
+      note.innerHTML = inner;
+
+      lastMark.after(sup, note);
+    }
+  }
+
+  // Full re-render. Clear injected UI first so text walkers see pristine source.
+  function renderAll() {
+    rendered.querySelectorAll('.anno-ref, .sidenote').forEach(el => el.remove());
+    renderHighlights();
+    renderSidenotes();
+    renderRail();
+  }
+
+  // ─────────── LIST (drawer) ───────────
+  function renderRail() {
+    const wrap = document.getElementById('rail-content');
+    if (state.annotations.length === 0) {
+      wrap.innerHTML = `
+        <div class="rail-empty">
+          <strong>Select any text</strong> in the document to suggest an edit, leave a comment, or mark for deletion. Your notes save automatically.
+        </div>`;
+      return;
+    }
+    const sorted = sortedAnnotations();
+    const items = sorted.map((a, i) => {
+      const quote = a.selectedText.length > 140 ? a.selectedText.slice(0, 140) + '…' : a.selectedText;
+      const body = a.body || '';
+      const bodyHtml = body ? `<p class="body">${escapeHtml(body)}</p>` : '';
+      const replHtml = (a.type === 'suggest' && a.replacement)
+        ? `<div class="replacement">${escapeHtml(a.replacement)}</div>` : '';
+      const unanchored = !anchoredIds.has(a.id);
+      const lineHtml = unanchored
+        ? `<span class="line warn" title="Couldn't locate this text in the document — it may have changed since the annotation was made.">⚠ not found</span>`
+        : `<span class="line">L${a.blockLineStart}</span>`;
+      return `
+        <li class="rail-item ${a.type}${unanchored ? ' unanchored' : ''}" data-id="${a.id}">
+          <div class="head">
+            <span class="type">${i + 1} · ${a.type}</span>
+            ${lineHtml}
+          </div>
+          <p class="quote">"${escapeHtml(quote)}"</p>
+          ${bodyHtml}
+          ${replHtml}
+        </li>`;
+    }).join('');
+    wrap.innerHTML = `<ol class="rail-list">${items}</ol>`;
+
+    wrap.querySelectorAll('.rail-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const id = item.dataset.id;
+        const anno = state.annotations.find(a => a.id === id);
+        if (!anno) return;
+        const block = findBlockByLine(anno.blockLineStart);
+        if (block) {
+          block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        focusAnnotation(id);
+      });
+    });
+  }
+
+  let focusedId = null;
+  let focusTimer = null;
+  function focusAnnotation(id) {
+    if (focusTimer) clearTimeout(focusTimer);
+    focusedId = id;
+    rendered.querySelectorAll('mark.anno').forEach(m => m.classList.toggle('focused', m.dataset.id === id));
+    rendered.querySelectorAll('.sidenote').forEach(s => s.classList.toggle('focused', s.dataset.id === id));
+    document.querySelectorAll('.rail-item').forEach(it => it.classList.toggle('focused', it.dataset.id === id));
+    const note = rendered.querySelector(`.sidenote[data-id="${id}"]`);
+    if (note) note.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    focusTimer = setTimeout(() => {
+      rendered.querySelectorAll('mark.anno.focused').forEach(m => m.classList.remove('focused'));
+      rendered.querySelectorAll('.sidenote.focused').forEach(s => s.classList.remove('focused'));
+      document.querySelectorAll('.rail-item.focused').forEach(it => it.classList.remove('focused'));
+      focusedId = null;
+    }, 2400);
+  }
+
+  // Click in body: sidenote → edit; ref → focus; mark → edit.
+  rendered.addEventListener('click', e => {
+    const sidenote = e.target.closest('.sidenote');
+    if (sidenote) {
+      const anno = state.annotations.find(a => a.id === sidenote.dataset.id);
+      if (anno) openEditor(anno);
+      return;
+    }
+    const ref = e.target.closest('.anno-ref');
+    if (ref) { focusAnnotation(ref.dataset.id); return; }
+    const mark = e.target.closest('mark.anno');
+    if (mark) {
+      const anno = state.annotations.find(a => a.id === mark.dataset.id);
+      if (anno) openEditor(anno);
+    }
+  });
+
+  // ─────────── SELECTION TOOLBAR ───────────
+  const toolbar = document.getElementById('sel-toolbar');
+  let pendingSelection = null;
+
+  function clearToolbar() {
+    toolbar.classList.remove('visible');
+    pendingSelection = null;
+  }
+
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+      clearToolbar();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    // Don't offer to annotate text inside an injected sidenote/ref.
+    const startEl = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+    if (startEl && startEl.closest('.sidenote, .anno-ref')) { clearToolbar(); return; }
+
+    // Anchor to the LEAF block where the selection STARTS. This is the single
+    // most important reliability rule: create-time and render-time must agree
+    // on the same element, and findAnchorBlock also resolves to a leaf block.
+    const blockEl = enclosingLeafBlock(range.startContainer);
+    if (!blockEl || !rendered.contains(blockEl)) {
+      clearToolbar();
+      return;
+    }
+    const blockText = blockTextOf(blockEl);
+
+    // Start offset within the start block.
+    let offsetStart = textOffsetInBlock(blockEl, range.startContainer, range.startOffset);
+    if (offsetStart === -1) { clearToolbar(); return; }
+
+    // End offset: if the selection ends in the SAME leaf block, use it.
+    // Otherwise the selection spans blocks — clamp to the end of the start
+    // block so the stored selection is always a substring of one leaf block.
+    const endBlock = enclosingLeafBlock(range.endContainer);
+    let offsetEnd;
+    if (endBlock === blockEl) {
+      offsetEnd = textOffsetInBlock(blockEl, range.endContainer, range.endOffset);
+      if (offsetEnd === -1) offsetEnd = blockText.length;
+    } else {
+      offsetEnd = blockText.length;
+    }
+
+    let lo = Math.min(offsetStart, offsetEnd);
+    let hi = Math.max(offsetStart, offsetEnd);
+    let selectedText = blockText.slice(lo, hi);
+    // Trim trailing/leading whitespace from the stored anchor so it stays tight.
+    const trimmedLead = selectedText.length - selectedText.trimStart().length;
+    const trimmedTail = selectedText.length - selectedText.trimEnd().length;
+    lo += trimmedLead; hi -= trimmedTail;
+    selectedText = blockText.slice(lo, hi);
+    if (!selectedText.trim()) { clearToolbar(); return; }
+
+    pendingSelection = {
+      blockLineStart: +blockEl.dataset.lineStart,
+      blockLineEnd: +blockEl.dataset.lineEnd,
+      offsetStart: lo,
+      offsetEnd: hi,
+      selectedText: selectedText
+    };
+
+    // Position toolbar above the selection rect.
+    const rect = range.getBoundingClientRect();
+    const tbWidth = 280;
+    const tbHeight = 36;
+    const top = window.scrollY + rect.top - tbHeight - 8;
+    const left = window.scrollX + rect.left + rect.width / 2 - tbWidth / 2;
+    toolbar.style.top = Math.max(8, top) + 'px';
+    toolbar.style.left = Math.max(8, Math.min(left, window.innerWidth - tbWidth - 16)) + 'px';
+    toolbar.classList.add('visible');
+  });
+
+  function textOffsetInBlock(blockEl, container, offset) {
+    // Walk SOURCE text nodes only (skip injected sidenotes/refs); sum lengths
+    // until we hit container, add local offset.
+    const nodes = blockTextNodes(blockEl);
+    let pos = 0;
+    for (const n of nodes) {
+      if (n === container) return pos + offset;
+      pos += n.textContent.length;
+    }
+    // container is an element: approximate boundary as the first contained text node.
+    if (container.nodeType === 1) {
+      let p = 0;
+      for (const n of nodes) {
+        if (container.contains(n)) return p;
+        p += n.textContent.length;
+      }
+    }
+    return -1;
+  }
+
+  // CRITICAL: pressing a toolbar button must NOT collapse the text selection.
+  // Without this, mousedown moves focus, the selection collapses, the
+  // selectionchange handler fires clearToolbar() and nulls pendingSelection
+  // BEFORE the click handler runs — so the annotation silently fails to add.
+  // preventDefault on mousedown keeps the selection and pendingSelection alive.
+  toolbar.addEventListener('mousedown', e => { e.preventDefault(); });
+
+  toolbar.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn || !pendingSelection) return;
+    const type = btn.dataset.type;
+    const anno = Object.assign({
+      id: 'a' + Math.random().toString(36).slice(2, 10),
+      type,
+      body: '',
+      replacement: type === 'suggest' ? pendingSelection.selectedText : '',
+      createdAt: new Date().toISOString()
+    }, pendingSelection);
+    clearToolbar();
+    window.getSelection().removeAllRanges();
+    openEditor(anno, /* isNew */ true);
+  });
+
+  // ─────────── EDITOR ───────────
+  const backdrop = document.getElementById('editor-backdrop');
+  const editor = document.getElementById('editor');
+  const editorType = document.getElementById('editor-type');
+  const editorLine = document.getElementById('editor-line');
+  const editorQuote = document.getElementById('editor-quote');
+  const editorBody = document.getElementById('editor-body');
+  const editorReplacement = document.getElementById('editor-replacement');
+  const replacementWrap = document.getElementById('replacement-wrap');
+  const bodyLabel = document.getElementById('body-label');
+  const deleteBtn = document.getElementById('editor-delete');
+  let editingAnno = null;
+  let isNewAnno = false;
+
+  function openEditor(anno, isNew) {
+    editingAnno = anno;
+    isNewAnno = !!isNew;
+    editor.className = 'editor ' + anno.type;
+    editorType.textContent = anno.type;
+    editorLine.textContent = 'Line ' + anno.blockLineStart + (anno.blockLineEnd !== anno.blockLineStart ? '–' + anno.blockLineEnd : '');
+    editorQuote.textContent = '"' + anno.selectedText + '"';
+    editorBody.value = anno.body || '';
+    if (anno.type === 'suggest') {
+      replacementWrap.hidden = false;
+      editorReplacement.value = anno.replacement || anno.selectedText;
+      bodyLabel.textContent = 'Why (optional)';
+      editorBody.placeholder = 'Why this change. Optional.';
+    } else if (anno.type === 'delete') {
+      replacementWrap.hidden = true;
+      bodyLabel.textContent = 'Why (optional)';
+      editorBody.placeholder = 'Why this should be removed. Optional.';
+    } else {
+      replacementWrap.hidden = true;
+      bodyLabel.textContent = 'Note';
+      editorBody.placeholder = 'Your comment.';
+    }
+    deleteBtn.hidden = isNew;
+    backdrop.classList.add('visible');
+    setTimeout(() => (anno.type === 'suggest' ? editorReplacement : editorBody).focus(), 50);
+  }
+
+  function closeEditor() {
+    backdrop.classList.remove('visible');
+    editingAnno = null;
+    isNewAnno = false;
+  }
+
+  document.getElementById('editor-cancel').addEventListener('click', closeEditor);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeEditor(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && backdrop.classList.contains('visible')) closeEditor();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && backdrop.classList.contains('visible')) {
+      document.getElementById('editor-save').click();
+    }
+  });
+
+  let saving = false; // guard against a double-fire (e.g. click + Cmd-Enter)
+  document.getElementById('editor-save').addEventListener('click', () => {
+    if (!editingAnno || saving) return;
+    saving = true;
+    try {
+      editingAnno.body = editorBody.value.trim();
+      if (editingAnno.type === 'suggest') {
+        editingAnno.replacement = editorReplacement.value;
+      }
+      editingAnno.updatedAt = new Date().toISOString();
+      if (isNewAnno) {
+        // Dedupe: if an identical anchor of the same type already exists, edit
+        // that one instead of creating a duplicate.
+        const dup = state.annotations.find(a =>
+          a.type === editingAnno.type &&
+          a.blockLineStart === editingAnno.blockLineStart &&
+          a.offsetStart === editingAnno.offsetStart &&
+          a.offsetEnd === editingAnno.offsetEnd);
+        if (dup) {
+          dup.body = editingAnno.body;
+          if (dup.type === 'suggest') dup.replacement = editingAnno.replacement;
+          dup.updatedAt = editingAnno.updatedAt;
+          editingAnno = dup;
+        } else {
+          state.annotations.push(editingAnno);
+        }
+      } else {
+        const idx = state.annotations.findIndex(a => a.id === editingAnno.id);
+        if (idx >= 0) state.annotations[idx] = editingAnno;
+      }
+      saveState();
+      renderAll();
+      const newId = editingAnno.id;
+      closeEditor();
+      focusAnnotation(newId);
+    } finally {
+      saving = false;
+    }
+  });
+
+  deleteBtn.addEventListener('click', () => {
+    if (!editingAnno) return;
+    if (!confirm('Delete this annotation?')) return;
+    state.annotations = state.annotations.filter(a => a.id !== editingAnno.id);
+    saveState();
+    renderAll();
+    closeEditor();
+  });
+
+  // ─────────── EXPORT ───────────
+  function buildExport() {
+    const now = new Date();
+    const ts = now.toISOString().slice(0, 16).replace('T', ' ');
+    const sorted = [...state.annotations].sort((a, b) => a.blockLineStart - b.blockLineStart || a.offsetStart - b.offsetStart);
+
+    let out = `# Annotations: ${SOURCE_FILENAME}\n`;
+    out += `Source SHA: ${SOURCE_SHA}\n`;
+    out += `Reviewed: ${ts}\n`;
+    out += `Annotations: ${sorted.length}\n\n`;
+
+    if (state.preamble.trim()) {
+      out += `## Notes for Claude\n\n${state.preamble.trim()}\n\n`;
+    }
+
+    if (sorted.length === 0) {
+      out += `## Annotations\n\n(none)\n`;
+      return out;
+    }
+
+    out += `## Annotations\n\n`;
+    for (const a of sorted) {
+      const lineLabel = a.blockLineStart === a.blockLineEnd ? `L${a.blockLineStart}` : `L${a.blockLineStart}-L${a.blockLineEnd}`;
+      out += `### ${a.type.toUpperCase()} · ${lineLabel}\n\n`;
+      out += `Selected: ${a.selectedText.replace(/\n/g, ' ')}\n\n`;
+      if (a.type === 'suggest') {
+        out += `Replace with: ${a.replacement.replace(/\n/g, ' ')}\n\n`;
+        if (a.body) out += `Why: ${a.body}\n\n`;
+      } else if (a.type === 'delete') {
+        if (a.body) out += `Why: ${a.body}\n\n`;
+      } else {
+        if (a.body) out += `Note: ${a.body}\n\n`;
+      }
+    }
+    return out;
+  }
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const md = buildExport();
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const base = SOURCE_FILENAME.replace(/\.[^.]+$/, '');
+    a.download = base + '.annotations.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', async () => {
+    const md = buildExport();
+    try {
+      await navigator.clipboard.writeText(md);
+      const btn = document.getElementById('btn-copy');
+      const orig = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    } catch (e) {
+      alert('Could not copy. Use Export instead.');
+    }
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('Delete all annotations and notes? This cannot be undone.')) return;
+    state = { preamble: '', annotations: [], lastSaved: null };
+    saveState();
+    document.getElementById('preamble').value = '';
+    renderAll();
+  });
+
+  // ─────────── DRAWER TOGGLE ───────────
+  const drawer = document.getElementById('drawer');
+  const listBtn = document.getElementById('btn-list');
+  function setDrawer(open) {
+    drawer.classList.toggle('open', open);
+    listBtn.classList.toggle('active', open);
+  }
+  listBtn.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')
+        && !backdrop.classList.contains('visible')) {
+      setDrawer(false);
+    }
+  });
+
+  // ─────────── INIT ───────────
+  renderAll();
+  updateStatus();
+
+  // Warn on unload if there are unsaved-to-disk annotations.
+  // (localStorage saves continuously; this warns against losing them by clearing browser data.)
+  window.addEventListener('beforeunload', e => {
+    if (state.annotations.length > 0) {
+      // Soft warning. Not a true "unsaved changes" since localStorage holds them.
+      // Skip the prompt; the localStorage persistence is reliable.
+    }
+  });
+})();
+</script>
+</body>
+</html>

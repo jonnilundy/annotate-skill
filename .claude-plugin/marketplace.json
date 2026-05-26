@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "annotate-skill",
+  "description": "Annotate: a self-contained, Tufte-styled HTML review surface for marking up markdown documents with inline suggestions, comments, and deletions.",
+  "owner": {
+    "name": "Jonni Lundy"
+  },
+  "plugins": [
+    {
+      "name": "annotate",
+      "description": "Turn any markdown file into a browser annotation surface. Select text to leave Suggest / Comment / Delete notes that anchor as margin sidenotes, then export structured markdown an AI can apply. No build step, no server, no dependencies beyond Python 3.",
+      "author": {
+        "name": "Jonni Lundy"
+      },
+      "category": "productivity",
+      "source": "./plugins/annotate",
+      "homepage": "https://github.com/jonnilundy/annotate-skill"
+    }
+  ]
+}

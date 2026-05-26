@@ -1,0 +1,9 @@
+{
+  "name": "annotate",
+  "description": "Turn a markdown file into a self-contained browser review surface: select text to leave Suggest / Comment / Delete annotations anchored as Tufte-style margin sidenotes, then export structured markdown for an AI to apply.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jonni Lundy"
+  },
+  "homepage": "https://github.com/jonnilundy/annotate-skill"
+}
