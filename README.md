@@ -23,51 +23,34 @@ You ask an AI for a draft. It writes a good one. Now you want to push back: tigh
 
 ## Install
 
-`annotate` is a standard `SKILL.md` skill, so it drops natively into whichever agent you use.
+`annotate` is a standard `SKILL.md` skill, so it works in any agent.
 
-**The easy way: paste this to your coding agent and let it install itself.**
+**Paste this to your agent** and let it install itself:
 
 ```text
 Install the annotate skill from https://github.com/jonnilundy/annotate-skill. Read the repo and set yourself up to use it the way that's native to your environment, then use it whenever I ask to review or annotate a markdown file.
 ```
 
-Or set it up manually:
+**Or use the universal installer** (Claude Code, Cursor, Codex, and ~50 more agents):
 
-<details>
-<summary><b>Claude Code</b></summary>
+```bash
+npx skills add jonnilundy/annotate-skill
+```
 
-One command, no cloning:
+Works with `pnpx` too. It detects your agent and drops the skill where that agent looks for it.
+
+**Or add it as a Claude Code plugin:**
 
 ```
 /plugin marketplace add jonnilundy/annotate-skill
 /plugin install annotate@annotate-skill
 ```
 
-</details>
+## Using it
 
-<details>
-<summary><b>Cursor</b></summary>
+Once it's installed, ask your agent to make a markdown file reviewable:
 
-Cursor auto-discovers skills from `~/.cursor/skills/` (global) or `.cursor/skills/` (per project), then activates them on its own or on demand when you type `/` in Agent chat. Drop the folder in and reload the window (`Cmd/Ctrl+Shift+P` → "Developer: Reload Window"):
-
-```bash
-git clone https://github.com/jonnilundy/annotate-skill
-cp -r annotate-skill/plugins/annotate/skills/annotate ~/.cursor/skills/annotate
-```
-
-</details>
-
-<details>
-<summary><b>Codex</b></summary>
-
-Codex auto-discovers skills from `~/.agents/skills/` (global) or `.agents/skills/` anywhere between your working directory and the repo root. Drop the folder in and start a new session:
-
-```bash
-git clone https://github.com/jonnilundy/annotate-skill
-cp -r annotate-skill/plugins/annotate/skills/annotate ~/.agents/skills/annotate
-```
-
-</details>
+> "annotate `draft.md`" · "make this reviewable" · "create an annotation page for this doc"
 
 ## The loop
 
