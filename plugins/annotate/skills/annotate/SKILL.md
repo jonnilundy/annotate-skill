@@ -75,7 +75,7 @@ When the reviewer pastes back the contents of `<basename>.annotations.md`, or ha
 2. **For each `SUGGEST` entry**: locate the `Selected` text in the source near the indicated `L<line>`. Apply the `Replace with` change as a string replacement.
 3. **For each `DELETE` entry**: locate the `Selected` text in the source near the indicated `L<line>`. Remove it (replace with empty string). Clean up adjacent whitespace or orphaned punctuation if removal would leave a dangling fragment. If a `Why` is present, treat it as context, not as a request for confirmation.
 4. **For each `COMMENT` entry**: do not modify the source. Include the note in your response — answer any implicit questions, address the point, or ask for direction. Legacy `QUESTION` entries in older exports should be treated the same as `COMMENT`.
-5. **For the `Notes for Claude` preamble**: this is high-level direction. Apply it to your overall approach (e.g. "keep changes minimal" or "confirm with the team before finalizing"). Surface anything that constrains the rest of the work.
+5. **For the `READ THIS FIRST` preamble**: this is high-level direction. Apply it to your overall approach (e.g. "keep changes minimal" or "confirm with the team before finalizing"). Surface anything that constrains the rest of the work.
 6. **If a `SUGGEST` or `DELETE` anchor can't be found verbatim in the source**: stop and flag it explicitly. Show the annotation, the line number, and ask whether the source has moved or whether to apply by fuzzy match. Never silently guess.
 7. **Verify the SHA**: the annotations file lists the source SHA at the top. If the current source SHA differs, warn the reviewer — their annotations are anchored to a version that no longer matches.
 
@@ -87,7 +87,7 @@ Source SHA: a3f2b1c4d5e6...
 Reviewed: 2026-05-19 14:32
 Annotations: 3
 
-## Notes for Claude
+## READ THIS FIRST
 
 Keep changes scoped to the onboarding section. Don't touch the API examples.
 

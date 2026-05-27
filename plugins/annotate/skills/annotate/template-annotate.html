@@ -536,7 +536,7 @@
   <main class="doc-wrap">
     <div class="doc">
       <section class="preamble">
-        <div class="label">Notes for Claude</div>
+        <div class="label">High-level instructions</div>
         <textarea id="preamble" placeholder="High-level direction for this review. What to keep in mind, what to do with the output."></textarea>
         <div class="hint">Always exported as the first section. Select any text in the document below to add an inline annotation.</div>
       </section>
@@ -1389,7 +1389,7 @@
     out += `Annotations: ${sorted.length}\n\n`;
 
     if (state.preamble.trim()) {
-      out += `## Notes for Claude\n\n${state.preamble.trim()}\n\n`;
+      out += `## READ THIS FIRST\n\n${state.preamble.trim()}\n\n`;
     }
 
     if (sorted.length === 0) {
