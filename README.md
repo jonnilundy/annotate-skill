@@ -23,7 +23,15 @@ You ask an AI for a draft. It writes a good one. Now you want to push back: tigh
 
 ## Install
 
-annotate is a standard `SKILL.md` skill, so it drops natively into whichever agent you use.
+`annotate` is a standard `SKILL.md` skill, so it drops natively into whichever agent you use.
+
+**The easy way: paste this to your coding agent and let it install itself.**
+
+```text
+Install the annotate skill from https://github.com/jonnilundy/annotate-skill. Read the repo and set yourself up to use it the way that's native to your environment, then use it whenever I ask to review or annotate a markdown file.
+```
+
+Or set it up manually:
 
 <details>
 <summary><b>Claude Code</b></summary>
@@ -50,7 +58,7 @@ cp -r annotate-skill/plugins/annotate/skills/annotate ~/.cursor/skills/annotate
 </details>
 
 <details>
-<summary><b>Codex CLI (and ChatGPT's Codex)</b></summary>
+<summary><b>Codex</b></summary>
 
 Codex auto-discovers skills from `~/.agents/skills/` (global) or `.agents/skills/` anywhere between your working directory and the repo root. Drop the folder in and start a new session:
 
@@ -86,7 +94,7 @@ Most review tools are loud. This one is quiet on purpose. The text sits in a nar
 
 ## Requirements
 
-- Python 3 (standard library only) to generate the review file
+- Python 3 to generate the review file
 
 ## License
 
