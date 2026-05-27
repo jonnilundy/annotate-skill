@@ -69,14 +69,11 @@ cp -r annotate-skill/plugins/annotate/skills/annotate ~/.agents/skills/annotate
 </details>
 
 <details>
-<summary><b>Claude Cowork & other Claude surfaces</b></summary>
+<summary><b>Claude Cowork</b></summary>
 
-Cowork shares Claude's Agent Skills. The Claude Code install above works, or drop the folder into your Claude skills directory:
+Cowork uses the same plugins as Claude Code, but it's a managed app rather than a CLI, so you add plugins through its interface, not a local folder. Open **Plugins** in the Cowork sidebar, click **+**, and choose from the directory.
 
-```bash
-git clone https://github.com/jonnilundy/annotate-skill
-cp -r annotate-skill/plugins/annotate/skills/annotate ~/.claude/skills/annotate
-```
+To get annotate into that directory, submit it at [claude.com/plugins](https://claude.com/plugins). Once it's listed, it installs in Cowork (and Claude Code) from the same place.
 
 </details>
 
