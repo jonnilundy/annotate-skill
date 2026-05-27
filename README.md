@@ -51,7 +51,9 @@ Works with `pnpx` too. It detects your agent and drops the skill where that agen
 Once it's installed, ask your agent to make a markdown file reviewable:
 
 > "annotate `{file}.md`"
+>
 > "make this reviewable"
+>
 > "create an annotation page for this doc"
 
 ## The loop
