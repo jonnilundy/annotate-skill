@@ -23,10 +23,19 @@ You ask an AI for a draft. It writes a good one. Now you want to push back: tigh
 
 ## Install
 
-Agent Skills follow an open `SKILL.md` standard, so annotate runs in any agent that supports them. All it needs is the skill folder and Python 3.
+annotate is a standard `SKILL.md` skill, so it drops natively into whichever agent you use. Each tool auto-discovers it from a skills folder. No build, no runtime, just the folder and Python 3.
+
+> **Seamless cross-tool tip:** Codex and Cursor both auto-discover the open-standard `~/.agents/skills/` folder. Install once there and it works in both.
+>
+> ```bash
+> git clone https://github.com/jonnilundy/annotate-skill
+> cp -r annotate-skill/plugins/annotate/skills/annotate ~/.agents/skills/annotate
+> ```
 
 <details>
 <summary><b>Claude Code</b></summary>
+
+One command, no cloning:
 
 ```
 /plugin marketplace add jonnilundy/annotate-skill
@@ -36,43 +45,38 @@ Agent Skills follow an open `SKILL.md` standard, so annotate runs in any agent t
 </details>
 
 <details>
-<summary><b>Claude Cowork</b></summary>
+<summary><b>Cursor</b></summary>
 
-Cowork shares the Claude Agent Skills system. Clone the repo and drop the skill folder into your skills directory:
+Cursor auto-discovers skills from `~/.cursor/skills/` (global) or `.cursor/skills/` (per project), then activates them on its own or on demand when you type `/` in Agent chat. Drop the folder in and reload the window (`Cmd/Ctrl+Shift+P` → "Developer: Reload Window"):
+
+```bash
+git clone https://github.com/jonnilundy/annotate-skill
+cp -r annotate-skill/plugins/annotate/skills/annotate ~/.cursor/skills/annotate
+```
+
+</details>
+
+<details>
+<summary><b>Codex CLI (and ChatGPT's Codex)</b></summary>
+
+Codex auto-discovers skills from `~/.agents/skills/` (global) or `.agents/skills/` anywhere between your working directory and the repo root. Drop the folder in and start a new session:
+
+```bash
+git clone https://github.com/jonnilundy/annotate-skill
+cp -r annotate-skill/plugins/annotate/skills/annotate ~/.agents/skills/annotate
+```
+
+</details>
+
+<details>
+<summary><b>Claude Cowork & other Claude surfaces</b></summary>
+
+Cowork shares Claude's Agent Skills. The Claude Code install above works, or drop the folder into your Claude skills directory:
 
 ```bash
 git clone https://github.com/jonnilundy/annotate-skill
 cp -r annotate-skill/plugins/annotate/skills/annotate ~/.claude/skills/annotate
 ```
-
-</details>
-
-<details>
-<summary><b>ChatGPT / Codex CLI</b></summary>
-
-Clone the repo and place the skill in Codex's skills directory:
-
-```bash
-git clone https://github.com/jonnilundy/annotate-skill
-mkdir -p ~/.codex/skills
-cp -r annotate-skill/plugins/annotate/skills/annotate ~/.codex/skills/annotate
-```
-
-Then ask your agent to "use the annotate skill to review `<file>.md`."
-
-</details>
-
-<details>
-<summary><b>Cursor</b></summary>
-
-Clone the repo and add the skill to your project, then point the agent at it:
-
-```bash
-git clone https://github.com/jonnilundy/annotate-skill
-cp -r annotate-skill/plugins/annotate/skills/annotate <your-project>/.cursor/skills/annotate
-```
-
-Then ask the agent to "use the annotate skill to review `<file>.md`."
 
 </details>
 
