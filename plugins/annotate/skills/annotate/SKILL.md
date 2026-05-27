@@ -115,7 +115,7 @@ The template uses an Edward Tufte–inspired layout (see https://edwardtufte.git
 
 **Layout.** The text sits in a left-weighted column (~36rem measure) with an open right margin where annotations render as **sidenotes** floated next to the text they reference, each tied to a small superscript number in the prose. Source line numbers are not shown in the UI; they are kept on each block (`data-line-start`) only for anchoring and the export (`L<n>`).
 
-**Hybrid display.** Sidenotes are the default view. A topbar "Annotations" toggle opens a slide-out **list (drawer)** for scanning/jumping across every annotation at once. Below ~1024px the right margin can't hold sidenotes, so they collapse and the drawer becomes the primary way to view them (superscript refs stay tappable).
+**Margin-only.** Annotations live as sidenotes in the right margin, with no separate list or drawer. Below ~1024px the right margin can't hold them, so they reflow inline beneath the text they reference.
 
 Three accent colors map to annotation types (used for the underline, the superscript, and the sidenote's left rule):
 
@@ -145,7 +145,7 @@ Annotations anchor to a single **leaf block** (a `<p>`, `<li>`, `<h2>` — never
 
 - **Selections anchor to the block where they START.** A selection that spans multiple blocks (e.g. two bullets) is **clamped to the start block** — the highlight covers the portion in that block, the note still applies. This is deliberate: cross-block selections used to silently fail to render.
 - **Render re-locates by text, not just line.** On load, each annotation is matched to the leaf block whose text actually contains its selected text (nearest to the stored line). Resilient to line drift and container/leaf mismatches.
-- **Never silently "drawer-only".** If an annotation cannot be located in the document (e.g. the source text changed), its drawer card is flagged `⚠ not found` with a dashed accent border, rather than appearing to vanish. Re-make it against the current text.
+- **Never silently lost.** If an annotation can't be placed in the document (e.g. the source text changed), it still renders as a flagged sidenote (`⚠ not found in document`) at the end of the doc, rather than vanishing. Re-make it against the current text.
 - **Toolbar press never loses the selection.** The selection toolbar `preventDefault`s its mousedown so clicking a type button can't collapse the selection mid-create.
 
 ## Known fragility

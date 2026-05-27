@@ -52,7 +52,6 @@
       --font-serif: 'Newsreader', Palatino, 'Palatino Linotype', Georgia, serif;
       --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
-      --drawer-width: 360px;
       --topbar-height: 52px;
     }
 
@@ -118,10 +117,9 @@
       transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
     .topbar button:hover { background: var(--paper-soft); color: var(--ink); }
-    .topbar button.primary { color: var(--accent); font-weight: 600; }
-    .topbar button.primary:hover { background: var(--accent); color: #fffff8; }
+    .topbar button.primary { background: var(--accent); color: #fffff8; border-color: var(--accent); font-weight: 600; }
+    .topbar button.primary:hover { background: #8f2a17; border-color: #8f2a17; color: #fffff8; }
     .topbar button.danger:hover { background: var(--accent-soft); color: var(--accent); }
-    .topbar button.toggle.active { background: var(--paper-soft); border-color: var(--rule-strong); color: var(--ink); }
 
     /* ─────────── LAYOUT ─────────── */
     .layout {
@@ -334,114 +332,10 @@
     .rendered .sidenote.anno-delete .sn-head { color: var(--delete); }
     .rendered .sidenote.focused { background: var(--highlight); border-radius: 0 3px 3px 0; }
 
-    /* ─────────── DRAWER (slide-out annotation list) ─────────── */
-    .drawer {
-      position: fixed;
-      top: var(--topbar-height);
-      right: 0;
-      width: var(--drawer-width);
-      max-width: 92vw;
-      height: calc(100vh - var(--topbar-height));
-      border-left: 1px solid var(--rule);
-      background: var(--paper-soft);
-      padding: 20px 18px 32px;
-      overflow-y: auto;
-      font-family: var(--font-sans);
-      transform: translateX(100%);
-      transition: transform 0.22s ease;
-      z-index: 40;
-      box-shadow: -10px 0 28px rgba(0,0,0,0.06);
-    }
-    .drawer.open { transform: translateX(0); }
-    .drawer h2 {
-      font-family: var(--font-sans);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin: 0 0 16px;
-    }
-    .rail-empty {
-      font-size: 13px;
-      color: var(--ink-3);
-      line-height: 1.5;
-      padding: 16px 0;
-    }
-    .rail-empty strong { color: var(--ink-2); }
-    .rail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-    .rail-item {
-      background: var(--card);
-      border: 1px solid var(--rule);
-      border-left: 3px solid;
-      border-radius: 4px;
-      padding: 12px 14px;
-      cursor: pointer;
-      transition: border-color 0.15s ease, transform 0.1s ease;
-    }
-    .rail-item:hover { border-color: var(--rule-strong); }
-    .rail-item.focused { transform: translateX(-3px); border-color: var(--ink-3); }
-    .rail-item.suggest { border-left-color: var(--suggest); }
-    .rail-item.comment { border-left-color: var(--comment); }
-    .rail-item.delete { border-left-color: var(--delete); }
-    .rail-item .head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 6px;
-    }
-    .rail-item .type {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-    .rail-item.suggest .type { color: var(--suggest); }
-    .rail-item.comment .type { color: var(--comment); }
-    .rail-item.delete .type { color: var(--delete); }
-    .rail-item .line {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--ink-3);
-    }
-    .rail-item .line.warn { color: var(--accent); font-weight: 600; cursor: help; }
-    .rail-item.unanchored { border-left-color: var(--accent); border-left-style: dashed; opacity: 0.92; }
-    .rail-item .quote {
-      font-family: var(--font-serif);
-      font-size: 13px;
-      font-style: italic;
-      color: var(--ink-2);
-      line-height: 1.4;
-      margin: 0 0 6px;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
-    .rail-item .body {
-      font-size: 13px;
-      color: var(--ink);
-      line-height: 1.45;
-      margin: 0;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-    }
-    .rail-item .replacement {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--suggest);
-      background: rgba(47, 94, 143, 0.10);
-      padding: 6px 8px;
-      border-radius: 3px;
-      margin-top: 6px;
-      line-height: 1.4;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-    }
+    /* Annotations that can't be placed in the document still get a sidenote,
+       flagged, at the end of the doc, so they're never silently lost. */
+    .rendered .sidenote.unplaced { float: none; clear: both; width: auto; max-width: 36rem; margin: 1.4rem 0 0; border-left-color: var(--accent); border-left-style: dashed; }
+    .rendered .sidenote.unplaced .sn-head::after { content: ' · not found in document'; color: var(--accent); }
 
     /* ─────────── SELECTION TOOLBAR ─────────── */
     .sel-toolbar {
@@ -603,15 +497,14 @@
     .mismatch.visible { display: block; }
 
     /* ─────────── RESPONSIVE ─────────── */
-    /* Below this width the right margin can't hold sidenotes: collapse them
-       and let the slide-out drawer be the way to view annotations. */
+    /* Below this width the right margin can't hold sidenotes, so they reflow
+       inline beneath the text they reference (Tufte's mobile behavior). */
     @media (max-width: 1024px) {
-      .rendered .sidenote { display: none; }
+      .rendered .sidenote { float: none; clear: both; width: auto; max-width: 100%; margin: 0.6rem 0 1.1rem; }
       .doc .rendered > *, .doc .preamble, .doc .rendered > table { max-width: 100%; }
       .doc-wrap { padding: 32px 28px 160px; }
     }
     @media (max-width: 640px) {
-      .drawer { width: 100%; max-width: 100%; }
       .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 10px; }
       .topbar .source { max-width: 100%; }
       .topbar .status { flex-basis: 100%; order: 3; }
@@ -629,8 +522,7 @@
     <span id="saved-when">saved</span>
   </div>
   <div class="actions">
-    <button id="btn-list" class="toggle" title="Show all annotations in a list">Annotations</button>
-    <button id="btn-copy" title="Copy annotations markdown to clipboard">Copy for Claude</button>
+    <button id="btn-copy" title="Copy annotations markdown to clipboard">Copy Changes</button>
     <button id="btn-export" class="primary" title="Download annotations.md">Export</button>
     <button id="btn-reset" class="danger" title="Delete all annotations">Reset</button>
   </div>
@@ -651,15 +543,10 @@
       <article class="rendered" id="rendered"></article>
     </div>
   </main>
-
-  <aside class="drawer" id="drawer">
-    <h2>Annotations</h2>
-    <div id="rail-content"></div>
-  </aside>
 </div>
 
 <div class="sel-toolbar" id="sel-toolbar">
-  <button class="suggest" data-type="suggest">Suggest edit</button>
+  <button class="suggest" data-type="suggest">Suggest</button>
   <button class="comment" data-type="comment">Comment</button>
   <button class="delete" data-type="delete">Delete</button>
 </div>
@@ -1117,11 +1004,6 @@
     }
   }
 
-  // Ids of annotations that successfully produced at least one mark on the last
-  // render. The drawer uses this to flag any annotation that couldn't anchor,
-  // so behaviour is never silently "drawer-only".
-  let anchoredIds = new Set();
-
   function renderHighlights() {
     // Clear existing marks
     rendered.querySelectorAll('mark.anno').forEach(m => {
@@ -1136,42 +1018,57 @@
       const block = findAnchorBlock(anno);
       highlightInBlock(block, anno);
     }
-    anchoredIds = new Set();
-    rendered.querySelectorAll('mark.anno').forEach(m => anchoredIds.add(m.dataset.id));
   }
 
   const TYPE_LABEL = { suggest: 'Suggest', comment: 'Comment', delete: 'Delete' };
 
   // ─────────── SIDENOTES (right margin) ───────────
+  function buildSidenote(a, n) {
+    const note = document.createElement('span');
+    note.className = 'sidenote anno-' + a.type;
+    note.dataset.id = a.id;
+    let inner = `<span class="sn-head"><span class="sn-num">${n}</span> · ${TYPE_LABEL[a.type] || a.type}</span>`;
+    if (a.body) {
+      inner += `<span class="sn-body">${escapeHtml(a.body)}</span>`;
+    } else if (a.type !== 'suggest') {
+      inner += `<span class="sn-empty">(no note)</span>`;
+    }
+    if (a.type === 'suggest' && a.replacement) {
+      inner += `<span class="sn-repl">${escapeHtml(a.replacement)}</span>`;
+    }
+    note.innerHTML = inner;
+    return note;
+  }
+
   function renderSidenotes() {
     rendered.querySelectorAll('.anno-ref, .sidenote').forEach(el => el.remove());
     const nums = annoNumberMap();
     for (const a of sortedAnnotations()) {
-      const marks = rendered.querySelectorAll(`mark.anno[data-id="${a.id}"]`);
-      if (!marks.length) continue; // text not found in DOM → appears in the list only
-      const lastMark = marks[marks.length - 1];
       const n = nums[a.id];
-
+      const note = buildSidenote(a, n);
+      const marks = rendered.querySelectorAll(`mark.anno[data-id="${a.id}"]`);
+      if (!marks.length) {
+        // Couldn't place in the document: still show it, flagged, at the end,
+        // so an annotation is never silently lost.
+        note.classList.add('unplaced');
+        rendered.appendChild(note);
+        continue;
+      }
+      const lastMark = marks[marks.length - 1];
       const sup = document.createElement('sup');
       sup.className = 'anno-ref anno-ref-' + a.type;
       sup.dataset.id = a.id;
       sup.textContent = n;
-
-      const note = document.createElement('span');
-      note.className = 'sidenote anno-' + a.type;
-      note.dataset.id = a.id;
-      let inner = `<span class="sn-head"><span class="sn-num">${n}</span> · ${TYPE_LABEL[a.type] || a.type}</span>`;
-      if (a.body) {
-        inner += `<span class="sn-body">${escapeHtml(a.body)}</span>`;
-      } else if (a.type !== 'suggest') {
-        inner += `<span class="sn-empty">(no note)</span>`;
+      // A floated sidenote can't live inside a table cell (it breaks the table
+      // and can't reach the margin). Keep the ref inline in the cell, but float
+      // the sidenote after the whole table.
+      const tableHost = lastMark.closest('table');
+      if (tableHost) {
+        lastMark.after(sup);
+        tableHost.after(note);
+      } else {
+        lastMark.after(sup, note);
       }
-      if (a.type === 'suggest' && a.replacement) {
-        inner += `<span class="sn-repl">${escapeHtml(a.replacement)}</span>`;
-      }
-      note.innerHTML = inner;
-
-      lastMark.after(sup, note);
     }
   }
 
@@ -1180,55 +1077,7 @@
     rendered.querySelectorAll('.anno-ref, .sidenote').forEach(el => el.remove());
     renderHighlights();
     renderSidenotes();
-    renderRail();
-  }
-
-  // ─────────── LIST (drawer) ───────────
-  function renderRail() {
-    const wrap = document.getElementById('rail-content');
-    if (state.annotations.length === 0) {
-      wrap.innerHTML = `
-        <div class="rail-empty">
-          <strong>Select any text</strong> in the document to suggest an edit, leave a comment, or mark for deletion. Your notes save automatically.
-        </div>`;
-      return;
-    }
-    const sorted = sortedAnnotations();
-    const items = sorted.map((a, i) => {
-      const quote = a.selectedText.length > 140 ? a.selectedText.slice(0, 140) + '…' : a.selectedText;
-      const body = a.body || '';
-      const bodyHtml = body ? `<p class="body">${escapeHtml(body)}</p>` : '';
-      const replHtml = (a.type === 'suggest' && a.replacement)
-        ? `<div class="replacement">${escapeHtml(a.replacement)}</div>` : '';
-      const unanchored = !anchoredIds.has(a.id);
-      const lineHtml = unanchored
-        ? `<span class="line warn" title="Couldn't locate this text in the document — it may have changed since the annotation was made.">⚠ not found</span>`
-        : `<span class="line">L${a.blockLineStart}</span>`;
-      return `
-        <li class="rail-item ${a.type}${unanchored ? ' unanchored' : ''}" data-id="${a.id}">
-          <div class="head">
-            <span class="type">${i + 1} · ${a.type}</span>
-            ${lineHtml}
-          </div>
-          <p class="quote">"${escapeHtml(quote)}"</p>
-          ${bodyHtml}
-          ${replHtml}
-        </li>`;
-    }).join('');
-    wrap.innerHTML = `<ol class="rail-list">${items}</ol>`;
-
-    wrap.querySelectorAll('.rail-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const id = item.dataset.id;
-        const anno = state.annotations.find(a => a.id === id);
-        if (!anno) return;
-        const block = findBlockByLine(anno.blockLineStart);
-        if (block) {
-          block.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        focusAnnotation(id);
-      });
-    });
+    updateStatus();
   }
 
   let focusedId = null;
@@ -1238,13 +1087,11 @@
     focusedId = id;
     rendered.querySelectorAll('mark.anno').forEach(m => m.classList.toggle('focused', m.dataset.id === id));
     rendered.querySelectorAll('.sidenote').forEach(s => s.classList.toggle('focused', s.dataset.id === id));
-    document.querySelectorAll('.rail-item').forEach(it => it.classList.toggle('focused', it.dataset.id === id));
     const note = rendered.querySelector(`.sidenote[data-id="${id}"]`);
     if (note) note.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     focusTimer = setTimeout(() => {
       rendered.querySelectorAll('mark.anno.focused').forEach(m => m.classList.remove('focused'));
       rendered.querySelectorAll('.sidenote.focused').forEach(s => s.classList.remove('focused'));
-      document.querySelectorAll('.rail-item.focused').forEach(it => it.classList.remove('focused'));
       focusedId = null;
     }, 2400);
   }
@@ -1368,6 +1215,15 @@
   // preventDefault on mousedown keeps the selection and pendingSelection alive.
   toolbar.addEventListener('mousedown', e => { e.preventDefault(); });
 
+  // Dedupe helper: an identical anchor of the same type already present?
+  function findDuplicate(anno) {
+    return state.annotations.find(a =>
+      a.type === anno.type &&
+      a.blockLineStart === anno.blockLineStart &&
+      a.offsetStart === anno.offsetStart &&
+      a.offsetEnd === anno.offsetEnd);
+  }
+
   toolbar.addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn || !pendingSelection) return;
@@ -1381,6 +1237,17 @@
     }, pendingSelection);
     clearToolbar();
     window.getSelection().removeAllRanges();
+    // Delete is a one-click action: most deletions need no note, so commit
+    // immediately instead of opening the editor.
+    if (type === 'delete') {
+      const dup = findDuplicate(anno);
+      if (dup) { focusAnnotation(dup.id); return; }
+      state.annotations.push(anno);
+      saveState();
+      renderAll();
+      focusAnnotation(anno.id);
+      return;
+    }
     openEditor(anno, /* isNew */ true);
   });
 
@@ -1433,11 +1300,32 @@
 
   document.getElementById('editor-cancel').addEventListener('click', closeEditor);
   backdrop.addEventListener('click', e => { if (e.target === backdrop) closeEditor(); });
+
+  // Editor keys: Escape closes; plain Enter submits; Cmd/Ctrl+Enter inserts a
+  // newline (the reverse of the usual textarea behavior, by request).
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && backdrop.classList.contains('visible')) closeEditor();
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && backdrop.classList.contains('visible')) {
-      document.getElementById('editor-save').click();
+    if (e.key === 'Escape' && backdrop.classList.contains('visible')) {
+      e.preventDefault();
+      closeEditor();
     }
+  });
+  editor.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.metaKey || e.ctrlKey) {
+      // Insert a newline at the cursor of the focused textarea.
+      const ta = e.target;
+      if (ta && ta.tagName === 'TEXTAREA') {
+        e.preventDefault();
+        const s = ta.selectionStart, en = ta.selectionEnd;
+        ta.value = ta.value.slice(0, s) + '\n' + ta.value.slice(en);
+        ta.selectionStart = ta.selectionEnd = s + 1;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      return;
+    }
+    // Plain Enter submits.
+    e.preventDefault();
+    document.getElementById('editor-save').click();
   });
 
   let saving = false; // guard against a double-fire (e.g. click + Cmd-Enter)
@@ -1559,21 +1447,6 @@
     saveState();
     document.getElementById('preamble').value = '';
     renderAll();
-  });
-
-  // ─────────── DRAWER TOGGLE ───────────
-  const drawer = document.getElementById('drawer');
-  const listBtn = document.getElementById('btn-list');
-  function setDrawer(open) {
-    drawer.classList.toggle('open', open);
-    listBtn.classList.toggle('active', open);
-  }
-  listBtn.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')
-        && !backdrop.classList.contains('visible')) {
-      setDrawer(false);
-    }
   });
 
   // ─────────── INIT ───────────
