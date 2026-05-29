@@ -832,21 +832,45 @@
 
   // ─────────── RENDER DOC ───────────
   const rendered = document.getElementById('rendered');
-  // Strip YAML frontmatter (--- ... ---) at the top of the document.
-  // Blank the lines rather than delete them so subsequent line numbers
-  // still match the original source file (anchors depend on this).
+  // Strip YAML frontmatter (--- ... ---) and any leading MDX import/export
+  // statements at the top of the document. Blank the lines rather than delete
+  // them so subsequent line numbers still match the source (anchors depend on
+  // this).
   let mdForRender = sourceMd;
   {
     const lns = mdForRender.split('\n');
+    // 1. YAML frontmatter.
     if (lns.length > 0 && /^---\s*$/.test(lns[0])) {
       for (let j = 1; j < lns.length; j++) {
         if (/^---\s*$/.test(lns[j])) {
           for (let k = 0; k <= j; k++) lns[k] = '';
-          mdForRender = lns.join('\n');
           break;
         }
       }
     }
+    // 2. MDX preamble: leading `import` / `export` statements, possibly
+    //    spanning multiple lines (e.g. `export const meta = { ... };`). Track
+    //    brace depth so multi-line statements are fully blanked.
+    let i = 0;
+    while (i < lns.length && /^\s*$/.test(lns[i])) i++;
+    while (i < lns.length && /^\s*(import|export)\b/.test(lns[i])) {
+      let depth = 0;
+      for (; i < lns.length; i++) {
+        const line = lns[i];
+        for (const ch of line) {
+          if (ch === '{') depth++;
+          else if (ch === '}') depth--;
+        }
+        const trimmed = line.trim();
+        lns[i] = '';
+        if (depth <= 0 && (trimmed.endsWith(';') || trimmed.endsWith('}') || trimmed.endsWith(')') || /^(import|export)\b[^{(]*['"][^'"]*['"]\s*;?\s*$/.test(trimmed))) {
+          i++;
+          break;
+        }
+      }
+      while (i < lns.length && /^\s*$/.test(lns[i])) i++;
+    }
+    mdForRender = lns.join('\n');
   }
   rendered.innerHTML = renderMarkdown(mdForRender);
   document.getElementById('preamble').value = state.preamble;
